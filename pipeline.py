@@ -22,6 +22,9 @@ def pipeline():
         instance_count=1,
         role=os.environ["SM_EXEC_ROLE"],
         sagemaker_session=sagemaker_session,
+        env={
+            "PC_BASE_DIR": os.environ["PC_BASE_DIR"],
+        }
     )
 
     # defining the processing step
