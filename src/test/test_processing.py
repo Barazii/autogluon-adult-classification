@@ -39,14 +39,14 @@ def directory():
 
 def test_directories_contents(directory):
     output_directories = os.listdir(directory)
-    assert "train" in output_directories
+    assert "training" in output_directories
     assert "test" in output_directories
-    assert "train.csv" in os.listdir(directory / "train")
+    assert "train.csv" in os.listdir(directory / "training")
     assert "test.csv" in os.listdir(directory / "test")
 
 
 def test_train_test_split(directory):
-    train_df = pd.read_csv(directory / "train" / "train.csv", header=None)
+    train_df = pd.read_csv(directory / "training" / "train.csv", header=None)
     test_df = pd.read_csv(directory / "test" / "test.csv", header=None)
 
     # no "?"
@@ -66,3 +66,11 @@ def test_train_test_split(directory):
         train_df[14].value_counts(normalize=True)
         - test_df[14].value_counts(normalize=True)
     ).abs().max() < 0.1
+
+    # mkae sure the label first column
+    assert (
+        train_df[0].isin(["<=50K", ">50K"]).all()
+    ), "Training labels not in expected format"
+    assert (
+        test_df[0].isin(["<=50K", ">50K"]).all()
+    ), "Test labels not in expected format"

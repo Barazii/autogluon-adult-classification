@@ -30,9 +30,12 @@ def processing(pc_base_dir):
 
     train_df, test_df = split_to_train_test_stratified(combined_df, 14)
 
-    (pc_base_dir / "train").mkdir(parents=True, exist_ok=True)
+    train_df = train_df[[14] + list(range(14))]
+    test_df = test_df[[14] + list(range(14))]
+
+    (pc_base_dir / "training").mkdir(parents=True, exist_ok=True)
     (pc_base_dir / "test").mkdir(parents=True, exist_ok=True)
-    train_df.to_csv(pc_base_dir / "train" / "train.csv", index=False, header=False)
+    train_df.to_csv(pc_base_dir / "training" / "train.csv", index=False, header=False)
     test_df.to_csv(pc_base_dir / "test" / "test.csv", index=False, header=False)
 
 
