@@ -15,12 +15,16 @@ from sagemaker.inputs import TrainingInput
 from sagemaker.transformer import Transformer
 from sagemaker.workflow.steps import TransformStep
 from sagemaker.workflow.functions import Join
+from pathlib import Path
+import tempfile
+import subprocess
+import boto3
 
 
 def pipeline():
     load_dotenv(override=True)
 
-    cache_config = CacheConfig(enable_caching=False, expire_after="10d")
+    cache_config = CacheConfig(enable_caching=True, expire_after="10d")
 
     sagemaker_session = PipelineSession(
         default_bucket=os.environ["S3_BUCKET_NAME"],
@@ -143,15 +147,54 @@ def pipeline():
         model_version=model_version,
         script_scope=inference_scope,
     )
+    # download sourcedir, upalod to s3 (otherwise error for some reason)
+    tmp_dir = Path(tempfile.mkdtemp())
+    sourcedir = tmp_dir / "sourcedir"
+    sourcedir.mkdir(exist_ok=True)
+    subprocess.run(
+        [
+            "aws",
+            "s3",
+            "cp",
+            inference_sourcedir_uri,
+            f"{sourcedir}/",
+        ],
+        check=True,
+    )
+    s3 = boto3.client("s3")
+    s3.upload_file(
+        f"{sourcedir}/sourcedir.tar.gz",
+        os.environ["S3_BUCKET_NAME"],
+        "sourcedir.tar.gz",
+    )
 
-    model = Model(
+    prediction_model = Model(
         image_uri=inference_image_uri,
-        source_dir=inference_sourcedir_uri,
+        source_dir=os.path.join(os.environ["S3_PROJECT_URI"], "sourcedir.tar.gz"),
         model_data=training_step.properties.ModelArtifacts.S3ModelArtifacts,
         entry_point="inference.py",
         role=os.environ["SM_EXEC_ROLE"],
         name="autogluon-adult-classification-ensemble",
         sagemaker_session=sagemaker_session,
+    )
+
+    from sagemaker.sklearn.model import SKLearnModel
+    from sagemaker.pipeline import PipelineModel
+
+    inference_parsing_model = SKLearnModel(
+        name="inference-parsing-model",
+        model_data=training_step.properties.ModelArtifacts.S3ModelArtifacts,
+        entry_point=f"src/inference_parsing.py",
+        framework_version=os.environ["SKL_VERSION"],
+        sagemaker_session=sagemaker_session,
+        role=os.environ["SM_EXEC_ROLE"],
+    )
+
+    model = PipelineModel(
+        name="model",
+        models=[prediction_model, inference_parsing_model],
+        sagemaker_session=sagemaker_session,
+        role=os.environ["SM_EXEC_ROLE"],
     )
 
     model_step = ModelStep(
@@ -180,9 +223,10 @@ def pipeline():
                     processing_step.properties.ProcessingOutputConfig.Outputs[
                         "test"
                     ].S3Output.S3Uri,
-                    "test.csv",
+                    "test_without_labels.csv",
                 ],
             ),
+            # data="s3://autogluon-adult-classification/processing-step/test/test_without_labels.csv",
             split_type="Line",
             join_source="None",
             content_type="text/csv",
@@ -193,7 +237,7 @@ def pipeline():
     # build the pipeline
     pipeline = Pipeline(
         name="autogluon-adult-classification-pipeline",
-        steps=[processing_step, training_step],
+        steps=[processing_step, training_step, model_step],
         sagemaker_session=sagemaker_session,
     )
 
