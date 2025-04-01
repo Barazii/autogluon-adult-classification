@@ -53,24 +53,28 @@ def test_train_test_split(directory):
     assert not (train_df == "?").any().any(), "Found '?' values in training data"
     assert not (test_df == "?").any().any(), "Found '?' values in test data"
 
+    # find column with income labels and make sure it's first column
+    income_col_train = [
+        i for i, col in train_df.items() if col.isin(["<=50K", ">50K"]).all()
+    ][0]
+    income_col_test = [
+        i for i, col in test_df.items() if col.isin(["<=50K", ">50K"]).all()
+    ][0]
+    income_col_train == 0, "Income column not first in training data"
+    income_col_test == 0, "Income column not first in test data"
+
     # labels not followed by "."
     assert not any(
-        train_df[14].str.contains("<=50K\.") | train_df[14].str.contains(">50K\.")
+        train_df[income_col_train].str.contains("<=50K\.")
+        | train_df[income_col_train].str.contains(">50K\.")
     )
     assert not any(
-        test_df[14].str.contains("<=50K\.") | test_df[14].str.contains(">50K\.")
+        test_df[income_col_test].str.contains("<=50K\.")
+        | test_df[income_col_test].str.contains(">50K\.")
     )
 
     # stratified split
     assert (
-        train_df[14].value_counts(normalize=True)
-        - test_df[14].value_counts(normalize=True)
-    ).abs().max() < 0.1
-
-    # mkae sure the label first column
-    assert (
-        train_df[0].isin(["<=50K", ">50K"]).all()
-    ), "Training labels not in expected format"
-    assert (
-        test_df[0].isin(["<=50K", ">50K"]).all()
-    ), "Test labels not in expected format"
+        train_df[income_col_train].value_counts(normalize=True)
+        - test_df[income_col_test].value_counts(normalize=True)
+    ).abs().max() < 0.01, "There is imbalance between the train data and test data"
