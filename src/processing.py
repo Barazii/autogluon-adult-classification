@@ -7,11 +7,15 @@ def processing(pc_base_dir):
     data_dir = pc_base_dir / "rawdata"
     split1_df = pd.read_csv(data_dir / "adult.data", header=None, skipinitialspace=True)
     split1_df.replace(to_replace="?", value=pd.NA, inplace=True)
-    split1_df = split1_df.apply(lambda col: col.fillna(col.mode()[0] if not col.mode().empty else None))
+    split1_df = split1_df.apply(
+        lambda col: col.fillna(col.mode()[0] if not col.mode().empty else None)
+    )
 
     split2_df = pd.read_csv(data_dir / "adult.test", header=None, skipinitialspace=True)
     split2_df.replace(to_replace="?", value=pd.NA, inplace=True)
-    split2_df = split2_df.apply(lambda col: col.fillna(col.mode()[0] if not col.mode().empty else None))
+    split2_df = split2_df.apply(
+        lambda col: col.fillna(col.mode()[0] if not col.mode().empty else None)
+    )
     split2_df.replace(to_replace="<=50K.", value="<=50K", inplace=True)
     split2_df.replace(to_replace=">50K.", value=">50K", inplace=True)
 
@@ -30,13 +34,22 @@ def processing(pc_base_dir):
 
     train_df, test_df = split_to_train_test_stratified(combined_df, 14)
 
-    train_df = train_df[[14] + list(range(14))]
-    test_df = test_df[[14] + list(range(14))]
-
-    (pc_base_dir / "training").mkdir(parents=True, exist_ok=True)
     (pc_base_dir / "test").mkdir(parents=True, exist_ok=True)
+    test_df.to_csv(
+        pc_base_dir / "test" / "test_with_labels.csv", index=False, header=False
+    )
+    test_labels_df = test_df[14]
+    test_labels_df.to_csv(
+        pc_base_dir / "test" / "test_labels.csv", index=False, header=False
+    )
+    test_df = test_df.drop(columns=[14])
+    test_df.to_csv(
+        pc_base_dir / "test" / "test_without_labels.csv", index=False, header=False
+    )
+
+    train_df = train_df[[14] + list(range(14))]
+    (pc_base_dir / "training").mkdir(parents=True, exist_ok=True)
     train_df.to_csv(pc_base_dir / "training" / "train.csv", index=False, header=False)
-    test_df.to_csv(pc_base_dir / "test" / "test.csv", index=False, header=False)
 
 
 if __name__ == "__main__":
