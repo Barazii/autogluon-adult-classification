@@ -7,7 +7,7 @@ except ImportError:
     worker = None
 
 
-def model_fn(model_dir):
+def model_fn(xyz):
     pass
 
 

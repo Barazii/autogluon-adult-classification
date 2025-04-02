@@ -237,7 +237,7 @@ def pipeline():
     # build the pipeline
     pipeline = Pipeline(
         name="autogluon-adult-classification-pipeline",
-        steps=[processing_step, training_step, model_step],
+        steps=[processing_step, training_step, model_step, transform_step],
         sagemaker_session=sagemaker_session,
     )
 
