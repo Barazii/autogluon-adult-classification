@@ -1,1 +1,1 @@
-Applying the autogluon model on the adult dataset.
+The autogluon model is applied on the adult dataset. The data splits were merged and split again using stratification. The data was fed raw to the training model as autogluon well-known in performing features transformation reliably during training.
